@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Предпросмотр прайса - {{ company.name }}{% endblock %}
+{% block content %}
+<h2>Предпросмотр прайса для "{{ company.name }}"</h2>
+<p>Выберите колонки и диапазон строк для загрузки.</p>
+<form method="post" action="/admin/companies/{{ company.id }}/upload/process">
+    <input type="hidden" name="temp_filename" value="{{ temp_filename }}">
+    <div class="mb-3">
+        <label for="sheet_name" class="form-label">Лист</label>
+        <select name="sheet_name" id="sheet_name" class="form-select">
+            {% for sheet in sheet_names %}
+            <option value="{{ sheet }}" {% if sheet == default_sheet %}selected{% endif %}>{{ sheet }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label for="start_row" class="form-label">Строка начала данных (номер строки)</label>
+            <input type="number" name="start_row" id="start_row" class="form-control" value="1" min="1" max="{{ total_rows }}" required>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label for="end_row" class="form-label">Строка окончания данных (включительно)</label>
+            <input type="number" name="end_row" id="end_row" class="form-control" value="{{ total_rows }}" min="1" max="{{ total_rows }}" required>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Укажите соответствие колонок</label>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Колонка</th>
+                    <th>Артикул</th>
+                    <th>Артикул внутренний</th>
+                    <th>Цена для клиента</th>
+                    <th>Закупочная</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for col in range(max_cols) %}
+                <tr>
+                    <td>Колонка {{ col + 1 }}</td>
+                    <td><input type="radio" name="article_col" value="{{ col }}" {% if col == 0 %}checked{% endif %}></td>
+                    <td><input type="radio" name="article_internal_col" value="{{ col }}" {% if col == 1 %}checked{% endif %}></td>
+                    <td><input type="radio" name="price_col" value="{{ col }}" {% if col == 2 %}checked{% endif %}></td>
+                    <td><input type="radio" name="price_cut_col" value="{{ col }}" {% if col == 3 %}checked{% endif %}></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <small>Выберите одну колонку для артикула (обязательно), Выберите одну для артикула внутреннего (обязательно), одну для цены (опционально) и одну для цены за отрез (опционально).</small>
+    </div>
+    <button type="submit" class="btn btn-success">Загрузить данные</button>
+</form>
+
+<h4 class="mt-4">Содержимое файла (все строки)</h4>
+<div style="max-height: 500px; overflow-y: auto;">
+    <table class="table table-sm table-bordered">
+        <thead>
+            <tr>
+                <th>№ строки</th>
+                {% for col in range(max_cols) %}
+                <th>Колонка {{ col + 1 }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                {% for col in range(max_cols) %}
+                <td>{{ row[col] if col < row|length else '' }}</td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

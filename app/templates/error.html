@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Ошибка {{ status_code }}{% endblock %}
+{% block content %}
+<div class="text-center mt-5">
+    <h1>Даже идеальные системы капризничают</h1>
+    <p class="lead">Произошла ошибка (код {{ status_code }}).</p>
+    {% if error_message %}
+    <div class="alert alert-danger">
+        <strong>Сообщение об ошибке:</strong> {{ error_message }}
+    </div>
+    {% endif %}
+    <a href="/" class="btn btn-primary">Вернуться на главную</a>
+</div>
+{% endblock %}

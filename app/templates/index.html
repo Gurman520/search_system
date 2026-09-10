@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Поиск товаров{% endblock %}
+{% block content %}
+<div class="row justify-content-center search-block">
+    <div class="col-md-8">
+        <form method="get" action="/" class="row g-3">
+            <div class="col-md-5">
+                <label for="company_id" class="form-label">Компания</label>
+                <select name="company_id" id="company_id" class="form-select">
+                    <option value="">Все компании</option>
+                    {% for company in companies %}
+                        <option value="{{ company.id }}" {% if selected_company == company.id %}selected{% endif %}>{{ company.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-5">
+                <label for="article" class="form-label">Артикул</label>
+                <input type="text" name="article" id="article" class="form-control" value="{{ article }}" minlength="4" placeholder="Минимум 4 символа">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">Найти</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if message %}
+<div class="alert alert-info mt-4">{{ message }}</div>
+{% endif %}
+
+{% if results %}
+<div class="mt-4">
+    <h3>Результаты поиска</h3>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Компания</th>
+                <th>Артикул</th>
+                <th>Артикул внутренний</th>
+                <th>Цена для клиента</th>
+                <th>Закупка</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product, company in results %}
+            <tr>
+                <td>{{ company.name }}</td>
+                <td>{{ product.article }}</td>
+                <td>{{ product.article_internal }}</td>
+                <td>{% if product.price is not none %}{{ product.price }}{% else %}-{% endif %}</td>
+                <td>{% if product.price_cut is not none %}{{ product.price_cut }}{% else %}-{% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

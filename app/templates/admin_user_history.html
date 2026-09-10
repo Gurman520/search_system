@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}История входов - {{ user_obj.login }}{% endblock %}
+{% block content %}
+<h2>История входов: {{ user_obj.first_name }} {{ user_obj.last_name }} ({{ user_obj.login }})</h2>
+<a href="/admin/users" class="btn btn-secondary mb-3">Назад</a>
+<table class="table table-sm">
+    <thead>
+        <tr>
+            <th>Дата и время (UTC)</th>
+            <th>Логин (попытка)</th>
+            <th>IP</th>
+            <th>User-Agent</th>
+            <th>Результат</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for h in history %}
+        <tr class="{% if not h.success %}table-danger{% endif %}">
+            <td>{{ h.login_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+            <td>{{ h.login_attempted }}</td>
+            <td>{{ h.ip_address or '-' }}</td>
+            <td><small>{{ h.user_agent or '-' }}</small></td>
+            <td>{{ 'Успешно' if h.success else 'Неудачно' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5">История пуста</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

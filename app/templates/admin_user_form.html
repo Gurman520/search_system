@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Редактировать' if user_obj else 'Добавить' }} пользователя{% endblock %}
+{% block content %}
+<h2>{{ 'Редактировать' if user_obj else 'Добавить' }} пользователя</h2>
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+<form method="post" action="{% if user_obj %}/admin/users/{{ user_obj.id }}/edit{% else %}/admin/users/add{% endif %}">
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label for="first_name" class="form-label">Имя *</label>
+            <input type="text" name="first_name" id="first_name" class="form-control" value="{{ user_obj.first_name if user_obj else '' }}" required>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label for="last_name" class="form-label">Фамилия *</label>
+            <input type="text" name="last_name" id="last_name" class="form-control" value="{{ user_obj.last_name if user_obj else '' }}" required>
+        </div>
+    </div>
+    <div class="mb-3">
+        <label for="login" class="form-label">Логин {% if not user_obj %}<small class="text-muted">(оставьте пустым для автогенерации)</small>{% endif %}</label>
+        <input type="text" name="login" id="login" class="form-control" value="{{ user_obj.login if user_obj else '' }}">
+    </div>
+    <div class="mb-3">
+        <label for="password" class="form-label">Пароль {% if user_obj %}<small class="text-muted">(оставьте пустым, чтобы не менять)</small>{% else %}*{% endif %}</label>
+        <input type="password" name="password" id="password" class="form-control" {% if not user_obj %}required{% endif %}>
+        <small class="form-text text-muted">Минимум 8 символов, 1 заглавная буква, 1 цифра, 1 специальный символ, только латиница.</small>
+    </div>
+    <button type="submit" class="btn btn-primary">Сохранить</button>
+    <a href="/admin/users" class="btn btn-secondary">Отмена</a>
+</form>
+{% endblock %}

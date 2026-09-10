@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Загрузка прайса - {{ company.name }}{% endblock %}
+{% block content %}
+<h2>Загрузка прайса для компании "{{ company.name }}"</h2>
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+<form method="post" action="/admin/companies/{{ company.id }}/upload/preview" enctype="multipart/form-data">
+    <div class="mb-3">
+        <label for="file" class="form-label">Выберите Excel файл (.xlsx или .xls)</label>
+        <input type="file" name="file" id="file" class="form-control" accept=".xlsx,.xls" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Загрузить и предпросмотреть</button>
+    <a href="/admin/companies" class="btn btn-secondary">Назад</a>
+</form>
+{% endblock %}
