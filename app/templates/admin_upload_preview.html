@@ -5,6 +5,8 @@
 <p>Выберите колонки и диапазон строк для загрузки.</p>
 <form method="post" action="/admin/companies/{{ company.id }}/upload/process">
     <input type="hidden" name="temp_filename" value="{{ temp_filename }}">
+    <input type="hidden" name="original_filename" value="{{ original_filename }}">
+
     <div class="mb-3">
         <label for="sheet_name" class="form-label">Лист</label>
         <select name="sheet_name" id="sheet_name" class="form-select">
@@ -21,6 +23,7 @@
         <div class="col-md-6 mb-3">
             <label for="end_row" class="form-label">Строка окончания данных (включительно)</label>
             <input type="number" name="end_row" id="end_row" class="form-control" value="{{ total_rows }}" min="1" max="{{ total_rows }}" required>
+            <small class="text-muted">Всего строк: <span id="total_rows_label">{{ total_rows }}</span></small>
         </div>
     </div>
 
@@ -36,7 +39,7 @@
                     <th>Закупочная</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="columns-body">
                 {% for col in range(max_cols) %}
                 <tr>
                     <td>Колонка {{ col + 1 }}</td>
@@ -57,14 +60,14 @@
 <div style="max-height: 500px; overflow-y: auto;">
     <table class="table table-sm table-bordered">
         <thead>
-            <tr>
+            <tr id="preview-header">
                 <th>№ строки</th>
                 {% for col in range(max_cols) %}
                 <th>Колонка {{ col + 1 }}</th>
                 {% endfor %}
             </tr>
         </thead>
-        <tbody>
+        <tbody id="preview-body">
             {% for row in rows %}
             <tr>
                 <td>{{ loop.index }}</td>
@@ -76,4 +79,84 @@
         </tbody>
     </table>
 </div>
+
+<script>
+document.getElementById('sheet_name').addEventListener('change', async function() {
+    const sheet = this.value;
+    const temp = document.querySelector('input[name=temp_filename]').value;
+    const url = `/admin/companies/{{ company.id }}/upload/preview-sheet?temp_filename=${encodeURIComponent(temp)}&sheet_name=${encodeURIComponent(sheet)}`;
+
+    try {
+        const resp = await fetch(url);
+        const data = await resp.json();
+        if (!resp.ok) {
+            alert(data.error || 'Ошибка загрузки листа');
+            return;
+        }
+        renderPreview(data.rows, data.max_cols);
+        renderColumns(data.max_cols);
+        document.getElementById('end_row').max = data.total_rows;
+        document.getElementById('end_row').value = data.total_rows;
+        document.getElementById('start_row').max = data.total_rows;
+        document.getElementById('start_row').value = 1;
+        document.getElementById('total_rows_label').textContent = data.total_rows;
+    } catch (e) {
+        alert('Ошибка соединения: ' + e.message);
+    }
+});
+
+function renderPreview(rows, maxCols) {
+    const header = document.getElementById('preview-header');
+    header.innerHTML = '<th>№ строки</th>';
+    for (let c = 0; c < maxCols; c++) {
+        const th = document.createElement('th');
+        th.textContent = 'Колонка ' + (c + 1);
+        header.appendChild(th);
+    }
+
+    const tbody = document.getElementById('preview-body');
+    tbody.innerHTML = '';
+    rows.forEach((row, idx) => {
+        const tr = document.createElement('tr');
+        const numTd = document.createElement('td');
+        numTd.textContent = idx + 1;
+        tr.appendChild(numTd);
+        for (let c = 0; c < maxCols; c++) {
+            const td = document.createElement('td');
+            td.textContent = (c < row.length) ? row[c] : '';
+            tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+    });
+}
+
+function renderColumns(maxCols) {
+    const prevArticle = document.querySelector('input[name=article_col]:checked')?.value;
+    const prevArticleInternal = document.querySelector('input[name=article_internal_col]:checked')?.value;
+    const prevPrice = document.querySelector('input[name=price_col]:checked')?.value;
+    const prevPriceCut = document.querySelector('input[name=price_cut_col]:checked')?.value;
+
+    const tbody = document.getElementById('columns-body');
+    tbody.innerHTML = '';
+    for (let c = 0; c < maxCols; c++) {
+        const tr = document.createElement('tr');
+        const articleChecked = (prevArticle !== undefined) ? (prevArticle == c)
+                              : (c === 0);
+        const articleInternalChecked = (prevArticleInternal !== undefined) ? (prevArticleInternal == c)
+                              : (c === 0);
+        const priceChecked = (prevPrice !== undefined) ? (prevPrice == c)
+                            : (c === 1);
+        const priceCutChecked = (prevPriceCut !== undefined) ? (prevPriceCut == c)
+                                : (c === 2);
+        tr.innerHTML = `
+            <td>Колонка ${c + 1}</td>
+            <td><input type="radio" name="article_col" value="${c}" ${articleChecked ? 'checked' : ''}></td>
+            <td><input type="radio" name="article_internal_col" value="${c}" ${articleInternalChecked ? 'checked' : ''}></td>
+            <td><input type="radio" name="price_col" value="${c}" ${priceChecked ? 'checked' : ''}></td>
+            <td><input type="radio" name="price_cut_col" value="${c}" ${priceCutChecked ? 'checked' : ''}></td>
+        `;
+        tbody.appendChild(tr);
+    }
+}
+</script>
 {% endblock %}

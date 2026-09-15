@@ -1,15 +1,16 @@
 from fastapi import APIRouter, Request, Depends, UploadFile, File, Form, HTTPException
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from app.database import get_db
-from app.models import Company, Product
+from app.models import Company, Product, UploadHistory
 from app.services.excel_loader import read_excel_preview, parse_excel_data
 from app.config import settings
 from app.dependencies import require_user
 import os
 import uuid
+import json
 
 
 router = APIRouter(prefix="/admin", dependencies=[Depends(require_user)])
@@ -117,6 +118,7 @@ async def upload_preview(request: Request, company_id: int, file: UploadFile = F
     return templates.TemplateResponse(request, "admin_upload_preview.html", {
         "company": company,
         "temp_filename": temp_filename,
+        "original_filename": file.filename,
         "sheet_names": sheet_names,
         "rows": rows,
         "max_cols": max_cols,
@@ -124,10 +126,36 @@ async def upload_preview(request: Request, company_id: int, file: UploadFile = F
         "default_sheet": sheet_names[0] if sheet_names else ""
     })
 
+@router.get("/companies/{company_id}/upload/preview-sheet")
+async def preview_sheet(company_id: int,
+                        temp_filename: str,
+                        sheet_name: str,
+                        db: Session = Depends(get_db)):
+    temp_path = os.path.join(settings.UPLOAD_FOLDER, temp_filename)
+    if not os.path.exists(temp_path):
+        return JSONResponse({"error": "Файл не найден, загрузите заново"}, status_code=404)
+    try:
+        _, rows = read_excel_preview(temp_path, sheet_name=sheet_name)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    max_cols = max([len(r) for r in rows]) if rows else 0
+    # Приводим ячейки к строкам, чтобы JSON корректно сериализовался (даты, float и т.д.)
+    safe_rows = []
+    for r in rows:
+        safe_row = []
+        for cell in r:
+            if cell is None:
+                safe_row.append("")
+            else:
+                safe_row.append(str(cell))
+        safe_rows.append(safe_row)
+    return {"rows": safe_rows, "max_cols": max_cols, "total_rows": len(rows)}
+
 # Обработка предпросмотра и загрузка данных
 @router.post("/companies/{company_id}/upload/process")
 async def upload_process(request: Request, company_id: int,
                          temp_filename: str = Form(...),
+                         original_filename: str = Form(""),
                          sheet_name: str = Form(...),
                          start_row: int = Form(...),
                          end_row: int = Form(...),
@@ -178,6 +206,11 @@ async def upload_process(request: Request, company_id: int,
             "error": f"Ошибка обработки файла: {str(e)}"
         }, status_code=400)
 
+    # Собираем старые артикулы
+    old_articles = {row[0] for row in db.query(Product.article).filter(Product.company_id == company_id).all()}
+    new_articles = {p['article'] for p in products}
+    removed = sorted(old_articles - new_articles)
+
     # Если products успешно получена, удаляем старые товары
     db.query(Product).filter(Product.company_id == company_id).delete()
     for p in products:
@@ -187,6 +220,17 @@ async def upload_process(request: Request, company_id: int,
             price=p['price'], 
             price_cut=p.get('price_cut'),
             company_id=company_id))
+
+     # История загрузки
+    history = UploadHistory(
+        company_id=company_id,
+        user_id=request.state.user.id if request.state.user else None,
+        filename=original_filename or temp_filename,
+        rows_count=len(products),
+        removed_count=len(removed),
+        removed_articles_json=json.dumps(removed, ensure_ascii=False),
+    )
+    db.add(history)
     db.commit()
     
     try:
@@ -195,3 +239,29 @@ async def upload_process(request: Request, company_id: int,
         pass
 
     return RedirectResponse("/admin/companies", status_code=303)
+
+@router.get("/uploads/{upload_id}")
+async def upload_result(request: Request, upload_id: int, db: Session = Depends(get_db)):
+    history = db.get(UploadHistory, upload_id)
+    if not history:
+        raise HTTPException(404, "Запись не найдена")
+    removed = json.loads(history.removed_articles_json) if history.removed_articles_json else []
+    return templates.TemplateResponse(request, "admin_upload_result.html", {
+        "history": history,
+        "removed": removed,
+    })
+
+@router.get("/companies/{company_id}/uploads")
+async def company_uploads(request: Request, company_id: int, db: Session = Depends(get_db)):
+    company = db.get(Company, company_id)
+    if not company:
+        raise HTTPException(404, "Company not found")
+    uploads = (db.query(UploadHistory)
+               .filter(UploadHistory.company_id == company_id)
+               .order_by(UploadHistory.uploaded_at.desc())
+               .all())
+    return templates.TemplateResponse(request, "admin_upload_history.html", {
+        "company": company,
+        "uploads": uploads,
+    })
+

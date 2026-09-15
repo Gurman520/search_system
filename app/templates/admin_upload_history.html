@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}История загрузок - {{ company.name }}{% endblock %}
+{% block content %}
+<h2>История загрузок: {{ company.name }}</h2>
+<a href="/admin/companies" class="btn btn-secondary mb-3">Назад к компаниям</a>
+
+<table class="table table-sm">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Дата и время (UTC)</th>
+            <th>Файл</th>
+            <th>Пользователь</th>
+            <th>Строк</th>
+            <th>Количество удаленных артикулов</th>
+            <th>Снято с продажи</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for u in uploads %}
+        <tr>
+            <td>{{ u.id }}</td>
+            <td>{{ u.uploaded_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+            <td>{{ u.filename }}</td>
+            <td>
+                {% if u.user %}{{ u.user.first_name }} {{ u.user.last_name }}
+                {% else %}-{% endif %}
+            </td>
+            <td>{{ u.rows_count }}</td>
+            <td>{{ u.removed_count }}</td>
+            <td>
+                {% if u.removed_articles_json %}
+                    {{ (u.removed_articles_json | fromjson) | length if false else '-' }}
+                {% else %}-{% endif %}
+            </td>
+            <td><a href="/admin/uploads/{{ u.id }}" class="btn btn-sm btn-outline-primary">Открыть</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7">Загрузок пока не было</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

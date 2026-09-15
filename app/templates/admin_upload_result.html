@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Результат загрузки{% endblock %}
+{% block content %}
+<h2>Результат загрузки прайса</h2>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <p><strong>Компания:</strong> {{ history.company.name }}</p>
+        <p><strong>Файл:</strong> {{ history.filename }}</p>
+        <p><strong>Пользователь:</strong>
+            {% if history.user %}{{ history.user.first_name }} {{ history.user.last_name }} ({{ history.user.login }})
+            {% else %}-{% endif %}
+        </p>
+        <p><strong>Дата и время (UTC):</strong> {{ history.uploaded_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+        <p><strong>Загружено товаров:</strong> {{ history.rows_count }}</p>
+        <p class="mb-0"><strong>Снято с продажи:</strong> {{ removed|length }}</p>
+    </div>
+</div>
+
+{% if removed %}
+<h4>Артикулы, снятые с продажи</h4>
+<div style="max-height: 400px; overflow-y: auto;">
+    <table class="table table-sm table-bordered">
+        <thead>
+            <tr><th>№</th><th>Артикул</th></tr>
+        </thead>
+        <tbody>
+            {% for a in removed %}
+            <tr><td>{{ loop.index }}</td><td>{{ a }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info">Снятых с продажи артикулов нет.</div>
+{% endif %}
+
+<a href="/admin/companies" class="btn btn-primary mt-3">К списку компаний</a>
+<a href="/admin/companies/{{ history.company_id }}/uploads" class="btn btn-secondary mt-3">История загрузок компании</a>
+{% endblock %}

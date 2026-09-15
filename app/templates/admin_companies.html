@@ -34,6 +34,7 @@
                     <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Удалить компанию и все её товары?')">Удалить</button>
                 </form>
                 <a href="/admin/companies/{{ company.id }}/upload" class="btn btn-sm btn-outline-success">Загрузить прайс</a>
+                <a href="/admin/companies/{{ company.id }}/uploads" class="btn btn-sm btn-outline-secondary">История</a>
             </td>
         </tr>
         {% else %}
