@@ -265,3 +265,44 @@ async def company_uploads(request: Request, company_id: int, db: Session = Depen
         "uploads": uploads,
     })
 
+@router.get("/companies/{company_id}/products")
+async def company_products(
+    request: Request,
+    company_id: int,
+    search: str = "",
+    page: int = 1,
+    db: Session = Depends(get_db)
+):
+    company = db.get(Company, company_id)
+    if not company:
+        raise HTTPException(404, "Company not found")
+
+    per_page = 100
+    query = db.query(Product).filter(Product.company_id == company_id)
+
+    if search and search.strip():
+        query = query.filter(Product.article.ilike(f"%{search.strip()}%"))
+
+    total = query.count()
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    if page < 1:
+        page = 1
+    if page > total_pages:
+        page = total_pages
+
+    products = (
+        query.order_by(Product.article)
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+        .all()
+    )
+
+    return templates.TemplateResponse(request, "admin_company_products.html", {
+        "company": company,
+        "products": products,
+        "search": search,
+        "page": page,
+        "total_pages": total_pages,
+        "total": total,
+        "per_page": per_page,
+    })
