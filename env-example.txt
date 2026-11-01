@@ -1,0 +1,7 @@
+DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5433/shop_search
+UPLOAD_FOLDER=/tmp/uploads
+LOGO_PATH=/static/logo.svg
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=shop_search
+SECRET_KEY=it-is-super-schearch-systems
